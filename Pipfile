@@ -1,0 +1,39 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+asgiref = "==3.5.0"
+astroid = "==2.11.2"
+autopep8 = "==1.6.0"
+colorama = "==0.4.4"
+dill = "==0.3.4"
+dj-database-url = "==0.5.0"
+django-ckeditor = "==6.4.0"
+django-heroku = "==0.3.1"
+django-js-asset = "==2.0.0"
+gunicorn = "==20.1.0"
+isort = "==5.10.1"
+lazy-object-proxy = "==1.7.1"
+mccabe = "==0.7.0"
+platformdirs = "==2.5.1"
+psycopg2 = "==2.9.3"
+pycodestyle = "==2.8.0"
+pylint = "==2.13.5"
+pylint-celery = "==0.3"
+pylint-django = "==2.5.3"
+pylint-plugin-utils = "==0.7"
+sqlparse = "==0.4.2"
+toml = "==0.10.2"
+tomli = "==2.0.1"
+tzdata = "==2022.1"
+whitenoise = "==6.0.0"
+wrapt = "==1.14.0"
+Django = "==4.0.4"
+Pillow = "==9.1.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
