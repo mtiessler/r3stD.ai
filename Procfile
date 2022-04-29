@@ -1,0 +1,1 @@
+web: gunicorn hackupc2022.wsgi
