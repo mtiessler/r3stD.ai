@@ -1,5 +1,4 @@
-from django.shortcuts import render
-from django.shortcuts import HttpResponse 
+from django.shortcuts import render, redirect, HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.views.decorators.csrf import csrf_exempt
 import shutil
@@ -13,7 +12,9 @@ TRANSFORMS_PATH = r"C:\Users\Max\Desktop\hackupc2022\3dmodule\data\nerf\userScen
 
 @csrf_exempt
 def upload(request):
+    print(request.FILES)
     if request.method == 'POST' and request.FILES['video']:
+
         myvideo = request.FILES['video']
         fs = FileSystemStorage()
         _ = fs.save(myvideo.name, myvideo)
@@ -27,12 +28,10 @@ def upload(request):
         video2frames(myvideo.name, mytrans is not None)
 
         if mytrans is None:
-            os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --images '+OUT_PATH+' --aabb_scale 2 --out '+ TRANSFORMS_PATH)
-        
-        
+            os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --images '+OUT_PATH+' --aabb_scale 2 --out '+ TRANSFORMS_PATH)
+         
         os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh output.obj --near_distance 0.5')
         
-
         files = os.listdir(OUT_PATH)
 
         if mytrans is not None:
@@ -40,8 +39,10 @@ def upload(request):
         for file in files:
             os.remove(OUT_PATH+"\\"+file)
         
+        return redirect('results')
+   
     else:
-        return HttpResponse("<h1>FILE NOT UPLOADED OK</h1>")
+        return redirect('')
 
 
 def home(request):

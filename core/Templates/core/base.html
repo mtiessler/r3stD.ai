@@ -20,12 +20,33 @@
     
         <!-- Navigation-->
         <!-- Navbar-->
-        <nav class="navbar navbar-light bg-light static-top">
-            <div class="container">
-                <a href="{% url 'home' %}"><img  src="{% static 'core/assets/img/59137.jpg' %}" height="50px" width="50px" alt="..."/></a>
-                <a class="navbar-brand" style="color: #f7941d" href="{% url 'aboutus' %}">About Us</a>
-                <a class="navbar-brand" style="color: #f7941d" href="{% url 'docs' %}">Documentation</a>
-                <a class="navbar-brand" style="color: #f7941d" href="#!">Devpost</a>
+        <nav class="navbar navbar-expand-xxl navbar-light fixed-top scrolling-navbar navbarPrincipal sticky-top p-0 topPagina"
+            style="background-color: rgb(255, 255, 255)">
+            <div class="container-fluid">
+                <button class="navbar-toggler btn-mobil" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse " id="navbarSupportedContent">
+
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ">
+                        <li class="nav-item p-2 btn-barra ">
+                            <a class="nav-link p-1 btn-barra" href="{% url 'home' %}">Home</a>
+                        </li>
+                        <li class="nav-item p-2 btn-barra ">
+                            <a class="nav-link p-1 btn-barra" href="{% url 'aboutus' %}">About Us</a>
+                        </li>
+                        <li class="nav-item p-2">
+                            <a class="nav-link p-1" href="{% url 'docs' %}">Documentation</a>
+                        </li>
+                        <li class="nav-item p-2">
+                            <a class="nav-link p-1" href="https://github.com/">Devpost</a>
+                        </li>        
+                    </ul>
+                </div>
+
             </div>
         </nav>
         {% block content %}

@@ -11,13 +11,15 @@ Home
                         <div class="text-center text-white">
                             <!-- Page heading-->
                             <h1 class="mb-5">Add your dream room video for an <font color = "#f7941d"> immersive </font>visit!</h1>
-                           <form action="multiupload.php" method="post" enctype="multipart/form-data">
-                                <div class="col-md-6" style="width: 100%; margin-bottom: 15px;" >
-                                    <input type="file" class="form-control" id="images" name="images[]" onchange="preview_images();" multiple/>
-                                </div>
-                                <div class="col-md-6" style="width: 100%;">
-                                    <input type="submit" class="btn" style="background-color: #f7941d ;" name='submit_video' value="Submit Video"/>
-                                    <input type="submit" class="btn" style="background-color: #da5050 ;" name='submit_video&trans' value="Submit Vídeo and Transforms"/>
+                           <form action="{% url 'upload' %}" method="post" enctype="multipart/form-data">
+                                <div class="col-md-6" style="width: 100%; margin-bottom: 30px;" >
+                                    <input style="margin-bottom: 10px;" type="file" class="form-control" id="images" name="video" onchange="preview_images();"/>
+
+                                    <input style="margin-bottom: 10px; background-color: #f7941d;" type="submit" class="btn" name='submit_video' value="Submit Video"/>
+
+                                    <input style="margin-bottom: 10px;" type="file" class="form-control" id="images" name="transforms" onchange="preview_images();"/>
+
+                                    <input style="margin-bottom: 10px; background-color: #da5050;" type="submit" class="btn" name='submit_video&trans' value="Submit Vídeo and Transforms"/>
                                 </div>
                             </form>
                         </div>
