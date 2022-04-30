@@ -165,6 +165,5 @@ class SkfabAPI:
         return False
 
 
-
 model_url = SkfabAPI.upload_model('/home/vant/scan.obj')
 print(model_url)
