@@ -1,61 +1,47 @@
 {% extends 'core\\base.html' %}
-    <main>
-        <section>
-            <div class="row" style="height: 200px;">
-                <div class="col result" >
-                    <p><strong>
-                       ¿Quienes somos?</br>
-                       Pues somos 4 estudiantes de la UPC con muchisísimas ganas de apernder y experimentar cosas nuevas y que mejor escenario que la HackUpc para dar rienda
-                       sueltas a nuestra imaginación y conocimientos.
-                    </p></strong>
-                </div>       
+{% block title %}
+About
+{% endblock %}
+
+{% block content %}
+{% load static %}
+<!-- Testimonials-->
+<section class="testimonials text-center bg-light" >
+    <div class="container">
+        <h2 class="mb-5">What people are working...</h2>
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                    <img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/avMiguel.jpg' %}" alt="..." />
+                    <h5>Miguel Marín</h5>
+                    <p class="font-weight-light mb-0">"Frontend."</p>
+                </div>
             </div>
+            <div class="col-lg-3">
+                <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                    <img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/avMax.png' %}" alt="..." />
+                    <h5>Max Tiessler</h5>
+                    <p class="font-weight-light mb-0">"Backend."</p>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                    <img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/avMiko.jpg' %}" alt="..." />
+                    <h5>Miguel Lopez</h5>
+                    <p class="font-weight-light mb-0">"Frontend"</p>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                    <img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/avPol.png' %}" alt="..." />
+                    <h5>Pol</h5>
+                    <p class="font-weight-light mb-0">"Backend"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-             <div class = "row">
-                <div class="col result" >
-                    <p><strong>
-                       Imagen
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Imagen
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Imagen
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Imagen
-                    </p></strong>
-                </div>
-             </div>
-             <div class = "row">
-                <div class="col result" >
-                    <p><strong>
-                       Miguel Marin
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Max Tiessler
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Miguel Lopez
-                    </p></strong>
-                </div>
-                <div class="col result" >
-                    <p><strong>
-                       Pol
-                    </p></strong>
-                </div>
-             </div>
+{% endblock %}
 
-        </section>
 
-    </main>

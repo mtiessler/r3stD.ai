@@ -22,9 +22,9 @@
         <!-- Navbar-->
         <nav class="navbar navbar-light bg-light static-top">
             <div class="container">
-                <img src="{% static 'core\assets\img\Logo_Restb.webp' %}" alt="logo">
-                <a class="navbar-brand" href="#!">About</a>
-                <a class="navbar-brand" href="#!">Documentation</a>
+                <a href="{% url 'home' %}"><img src="{% static 'core\assets\img\Logo_Restb.webp' %}"  alt="logo"></a>
+                <a class="navbar-brand" href="{% url 'aboutus' %}">About Us</a>
+                <a class="navbar-brand" href="{% url 'docs' %}">Documentation</a>
                 <a class="navbar-brand" href="#!">Devpost</a>
             </div>
         </nav>
