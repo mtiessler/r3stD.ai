@@ -4,7 +4,10 @@ from django.views.decorators.csrf import csrf_exempt
 import shutil
 import cv2
 import os
-import json 
+import json
+import uuid
+
+from core.extras.FirebaseAPI import FirebaseAPI 
 
 INTERNAL = '0c8d-79-156-141-48.eu.ngrok.io'
 OUT_PATH = 'C:\\Users\\Max\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\images'
@@ -26,6 +29,11 @@ def upload(request):
             transform = fs.save(mytrans.name, mytrans)
             shutil.move('media/'+mytrans.name, TRANSFORMS_PATH)
         video2frames(myvideo.name, mytrans is not None)
+
+        fa = FirebaseAPI()
+        fa.save_images(uuid.uuid4().hex, "C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\images\\", 1)
+
+        
 
         if mytrans is None:
             os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --images '+OUT_PATH+' --aabb_scale 2 --out '+ TRANSFORMS_PATH)
