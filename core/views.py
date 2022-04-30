@@ -3,6 +3,7 @@ from django.shortcuts import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.views.decorators.csrf import csrf_exempt
 import requests
+import extras.RbAPI.py
 
 INTERNAL = '0c8d-79-156-141-48.eu.ngrok.io'
 
@@ -32,4 +33,34 @@ def docs(request):
     return render(request, 'core/documentation.html')
 
 def results(request):
-    return render(request, 'core/result.html')
+    uuid = 'GENERATE_REQUEST_UUID'
+
+    try:
+
+        # Some how obtain the video
+        #video = request.FILES['file']
+        
+        # creates /<uuid>/images/ with all the images inside
+        images_path = ImageExtractor.extract_images(uuid, video) 
+        
+        ok = FirebaseAPI.save_images(uuid, images_path) # uploads all images from /uuid/images to Firestore at Document Path '<uuid>/images'
+        
+        # creates <uuid>.obj
+        model_obj = ModelGenerator.new_model(images_path)
+
+
+        # Feature detection with Restb.ai API
+        rb_wrapper = RbAPI()
+        image_urls = FirebaseAPI.load_image_links(uuid)
+        for image_url in image_urls:
+            detections.append(rb_wrapper.get_all_data(image_url))
+
+        # uploads the sketch to skfabAPI and obtains its url for the iframe
+        model_url = SkfabAPI.upload_model()
+
+        return render(request, 'core/result.html')
+
+    except Exception as e:
+        return str(e.message)
+
+        # TODO: Define Exceptions
