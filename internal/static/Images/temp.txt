@@ -1,0 +1,1202 @@
+#-*- coding:utf-8 -*-
+"""
+																																		   //
+	///        ///  /////////////  ////////////                                                 /////////////
+   ///        ///  //        ///  ///                 ////////////  ///////////  ////////////  ///       ///     /////////  ///////////  ///  //////////   ////////////
+  ///        ///  /////////////  ///                 ///       //  ///          ///      ///  /////////////  .........///  ///          ///  ///     ///  ///       ///
+ ///        ///  ///            ///                 ///*********  ///          ///      ///  ///     \\\    ///      ///  ///          ///  ///     ///  ///       ///
+//////////////  ///            /////////////       /////////     ///////////  ////////////  ///       \\\  ////////////  ///////////  ///  ///     ///  .////////////
+																																								 ///
+																																							//////.
+
+
+
+Copyright 2020 UPC ecoRacing Driverless
+
+  UPC ecoRacing Driverless <driverless@ecoracing.es>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+====================================
+	  Memory Path Plan Node
+====================================
+- Stable motion compensation
+-
+-
+-
+-
+"""
+
+
+# ================================== LIBRARIES DEFINITION ==================================
+
+# ---------------------------------- ROS & PYTHON ------------------------------------------
+
+import rospy
+
+# ------------------------------------ Messagges -------------------------------------------
+
+from general_msgs.msg import State, Track3, TrackCone2, Path, Laps, Mission
+from general_msgs.msg import PathPlan
+
+from visualization_msgs.msg import MarkerArray, Marker
+
+from geometry_msgs.msg import Point
+
+import tf2_ros
+import tf
+
+# ----------------------------------  Mathematic calculus ----------------------------------
+
+import math                                    # Math constants and functions
+import numpy as np                             # Matrix/Array library
+from scipy.interpolate import interp1d         # Basic interpolation for states
+from scipy.interpolate import splprep, splev   # Spline interpolation function
+from shapely.geometry import Point, LineString # Shapes for edge detection
+from scipy.spatial import Delaunay
+
+from scipy.spatial.qhull import QhullError
+from shapely.errors import TopologicalError
+
+
+#==================================== FUNCTION DEFINITION ====================================
+
+#==================================== SHAPELY ====================================
+
+
+def npArrayToShapelyLines(points):
+	lines = [LineString([line[0], line[1]]) for line in points]
+	return lines
+
+def intersection_lines(line, lines):
+	for i in lines:
+		if line.intersects(i):
+			return True
+	return False
+
+def shapelyPoints(points):
+	result = []
+	for i in points:
+		result.append(Point(i.x, i.y))
+	return result
+
+#==================================== POINTS ====================================
+
+def angle(vec1, vec2):
+	""" Returns the angle between two vectors """
+	return float(math.acos((vec1.x * vec2.x + vec1.y * vec2.y) / (vec1.modulo()*vec2.modulo())))
+
+def midPoint(p1, p2):
+	""" Mid point knowing the weigth and color of the points"""
+	p1v = np.array([p1.x, p1.y])
+	p2v = np.array([p2.x, p2.y])
+
+
+	new_cords = (p1v * p1.w + p2v * p2.w) / (p1.w + p2.w)
+	newPoint = Punto(round(new_cords[0],8), round(new_cords[1],8), p1.w + p2.w, p1.yellow + p2.yellow, p1.blue + p2.blue)
+	return newPoint
+
+def vector(p1, p2):
+	""" Returns de vector that goes from one point to another """
+	vec = Punto(p2.x - p1.x, p2.y - p1.y)
+	return vec
+
+def getMinDistance(origin, points):
+	min_dist = 1000
+	for i in points:
+		distance = distancePoint(origin, i)
+		if distance < min_dist:
+			min_dist = distance
+	return min_dist
+
+def minDistanceIndex(points, point, used_points = None): # ok
+	min_distance = 1000000
+	min_index = -1
+	for i in range(len(points)):
+		if used_points != None:
+			if used_points[i]: continue
+		distance = np.linalg.norm(np.array(points[i])-np.array(point))
+		if distance < min_distance:
+			min_distance = distance
+			min_index = i
+	return min_index
+
+
+def distancePoint(point1, point2):
+	return ((point1.x-point2.x)**2 + (point1.y-point2.y)**2)**0.5
+
+#==================================== MATH ====================================
+
+
+def get_angle(vector_1, vector_2):
+	""" Returns the angle between two vectors """
+	unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
+	unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
+	dot_product = np.dot(unit_vector_1, unit_vector_2)
+	angle = np.arccos(dot_product)*180/np.pi
+	return angle
+
+def z_rotation(vector,theta):
+	"""Rotates 3-D vector around z-axis"""
+	R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]]).reshape((2,2))
+	return np.dot(R,vector)
+
+
+def pntArrayToNpArray(points):
+	result = []
+	for i in points:
+		result.append([i.x,i.y])
+	return np.array(result)
+
+def merge_points(points, safeDistance): # ok
+	# delete all points near other ones
+	for i in range(len(points)):
+		new_points = points[:]
+		for j in range(i+1, len(points)):
+			if np.linalg.norm(np.array(points[i])-np.array(points[j])) < safeDistance:
+				points[i] = (points[i][0] + points[j][0])/2, (points[i][1] + points[j][1])/2
+				new_points.pop(j)
+		points = new_points
+	return points
+
+# ==================================== STATES ====================================
+
+def state_interpolation(t, state_buffer):
+	""" Interpolates the state of the vehicle to 
+	a given time t. """
+	x_states = state_buffer[:,0]
+	y_states = state_buffer[:,1]
+	w_states = state_buffer[:,2]
+	time_buffer = state_buffer[:,3]
+	f1, f2, f3 = interp1d(time_buffer, x_states), interp1d(time_buffer, y_states), interp1d(time_buffer, w_states)
+	return f1(t), f2(t), f3(t)
+
+def create_addy_list(points, yellow_count):
+	addy_list = {}
+	yellow_lines = []
+	blue_lines = []
+
+	try:
+		tri = Delaunay(points)
+	except QhullError:
+		return {},[],[]
+	except IndexError:
+		return {},[],[]
+
+	is_yellow = lambda x: x < yellow_count
+
+	for i in tri.simplices:
+		compare_indexes = [[0,1], [1,2], [2,0]]
+		for indexes in compare_indexes:
+			if i[indexes[0]] not in addy_list:
+				addy_list[i[indexes[0]]] = set()
+
+			if i[indexes[1]] not in addy_list:
+				addy_list[i[indexes[1]]] = set()
+
+			
+			first_point = points[i[indexes[0]]]
+			second_point = points[i[indexes[1]]]
+
+			if (is_yellow(i[indexes[0]]) and is_yellow(i[indexes[1]])):
+				if (np.linalg.norm(first_point-second_point) < 5.0):
+					yellow_lines.append([first_point, second_point])
+			
+			elif (not is_yellow(i[indexes[0]]) and not is_yellow(i[indexes[1]])):
+				if (np.linalg.norm(first_point-second_point) < 5.0):
+					blue_lines.append([first_point, second_point])
+			
+			elif (is_yellow(i[indexes[0]]) != is_yellow(i[indexes[1]])):
+				if (np.linalg.norm(first_point-second_point) < np.sqrt(5+5)):
+					addy_list[i[indexes[0]]].add(i[indexes[1]])
+					addy_list[i[indexes[1]]].add(i[indexes[0]])
+			
+	return [addy_list, blue_lines, yellow_lines]
+
+# ==================================== CLASS DEFINITION ====================================
+class UnviablePath(Exception):
+	def __init__(self, message="Unvaliable Path"):
+		Exception.__init__(self, message)
+
+class Punto:
+	def __init__(self, x = 0.0, y = 0.0, w = 1.0, yellow = 0, blue = 0):
+		""" Constructora por defecto"""
+		self.x = x
+		self.y = y
+		self.z = 0 # Needed to be used in markers
+		self.w = min(w, 100) # Weight
+		self.yellow = min(yellow,10) # Yellow votes
+		self.blue = min(blue, 10) # Blue votes
+
+	def __str__(self):
+		""" Debugging print """
+		txt =  "Punto:\n"
+		txt+= "x: "+str(self.x) + "\n"
+		txt+= "y: "+str(self.y)+ "\n"
+		txt+= "w: "+str(self.w)+ "\n"
+		txt+= "yellow: "+str(self.yellow)+ "\n"
+		txt+= "blue: "+str(self.blue)
+		return txt
+
+	def modulo(self):
+		""" Returns the size of the vector that goes from the origin to this point"""
+		return math.sqrt(self.x*self.x + self.y*self.y)
+
+class PathPlanSave:
+
+	# ---------------------------- Static variables definition -----------------------------
+
+	def __init__(self):
+		# ------------------------------- Variables definition -------------------------------
+		self.savedPoints = [] #Waypoints
+
+		self.carPosX = 0.0 # Car parameters
+		self.carPosY = 0.0
+		self.carYaw  = 0.0
+
+		self.finish_acc = False # Flag to indicate if the car has reached the finish line
+
+		self.cones = []
+		self.cone_visuals = []
+		self.fixed_cones = [] #Conos que se mantienen para no tener problemas de paralelismo
+
+		self.state_buffer = [] #Buffer de estados para la interpolacion
+
+		self.savedBlue = [] # Conos que se van a publicar
+		self.savedYellow = []
+
+		self.blockArea = [] # Areas bloqueadas
+
+		self.lines = [] # Lineas de triangulación para visualizacion
+
+		self.perception_lock = False    # Señal de sincronización para permitir lectura desde
+										# dos topics sin tener problemas de acceso a memoria
+
+		self.processing_lock = False    # No modificamos los conos durante la copia
+
+		self.received_readings = False  # Señal para evitar procesado publicación sin datos
+										# En caso de publicar marker vacío RVIZ colapsa
+
+		self.loop_end = False           # Detección de final de la primera vuelta
+										# A partir de la primera vuelta le toca trabajar
+										# al track_optimizer
+		self.detected_origin = True
+		self.detect_origin_distance = 9.0
+		self.lap_count = 0
+
+		self.start_point_set = False
+		self.has_orange = True
+
+		self.start_point_position = Punto()
+
+		self.mission = None
+		self.mission_laps = 100 # default value
+
+		self.asState = 0
+		# -------------------------------- Launch parameters ----------------------------------
+
+		# === VARIABLES === #
+
+		self.world_frame =              rospy.get_param('/world_frame', 'map')
+		self.max_angle =                math.pi/(rospy.get_param('/angleDivisor', 4.0))
+		self.coneDistance =             rospy.get_param('/coneDistance', 2.8)
+		self.doPublishMiddleLine =      rospy.get_param('/publishMiddleLine', True)
+		self.doPublishConePrediction =  rospy.get_param('/publishCones', True)
+		self.doPublishTriangulation =   rospy.get_param('/publishTriangulation', True)
+		self.distSecure =               rospy.get_param('/secureDistance', 8.0)
+		self.secureWeight =             rospy.get_param('/minWeight', 1)
+		self.breakDistance =            rospy.get_param('/breakDistance', 8.0)
+		self.saveMap =                  rospy.get_param('/saveMap', False)
+		self.doMonitoring =             rospy.get_param('/doMonitoring', True)
+		
+		# TEMP MAP
+		self.tempMap =                  rospy.get_param('/temporaryMap', False)
+		self.mission_laps =             rospy.get_param('/mission_laps', 0)
+		self.track_size=                rospy.get_param('/track_size', 3.5)
+
+		# ==================== NEW FEATURES =================
+		# Changes block area between "Lists" and "Delaunay" # TODO: Test this
+		#  - Delaunay uses Delaunay triangulation to create forbidden area
+		#  - Lists uses distance between cones to creates the fobidden area by distance
+		self.blockType =                rospy.get_param('/blockType', 'Delaunay')
+
+		# Improved middleline changes the way the midline is computed when we only see one point # TODO: Test this
+		self.improvedMiddleLine =       rospy.get_param('/improvedMiddleLine', True)
+		
+		# State interpolation is te "perfect" motion compensation saving a buffer of the last # TODO: Test this
+		# states and timestamps to know where was the car when de readings were taken
+		self.doStateInterpolation =     rospy.get_param('/doStateInterpolation', True)
+
+		# Multiplies by 10 the waypoints of the middleline using spline interpolation # TODO: Test this
+		# if at least 3 waypoints are added.
+		self.doSplineInterpolation =    rospy.get_param('/doSplineInterpolation', True)
+		
+
+		self.doTFInterpolation= rospy.get_param('/doTFInterpolation', True)
+		# This feature only works if tempMap is available, it takes the readings 
+
+		# from the cones at the back
+		self.doBackwardsTriangulation = rospy.get_param('/doBackwardsTriangulation', True)
+
+		# Extends by 1m back and front of the middleline if at least 2 waypoints # TODO: Test this
+		# where calculated
+		self.doExtendLine = rospy.get_param('/doExtendLine', True)
+
+		# Merges the midpoints using a defined distence to avoid problems with interpolation # TODO: Test this
+		self.doMergeMidPoints = rospy.get_param('/doMergeMidPoints', True)
+		self.midPointsMergeDist = rospy.get_param('/midPointsMergeDist', 0.5)
+
+		# ==================== END OF FEATURES =================
+
+		# The new triangulation type has a better performance with a better middle line
+		# but the old version has increased robustness
+
+		self.first_cones =              rospy.get_param('/ignoredReadings', 20)
+		# Ignoramos las primeras lecturas para evitar problemas de inicializacion
+
+		# === TOPIC NAMES === #
+
+		# Subscribirse
+		satate_topic =                  rospy.get_param('/topicState', 'state_estimation')
+		cone_proyection_topic =         rospy.get_param('/topicTrack', '/perception/cam_cones')
+		mission_topic =                 rospy.get_param('/missionTopic', '/misc/mission')
+
+		# Publicar
+		path_topic =                    rospy.get_param('/topicPath', '/path')
+		lap_count_topic =               rospy.get_param('/lapsCount', '/estimation/laps')
+		monitoring_topic =              rospy.get_param('/monitoringTopic', '/monitor/path_plan')
+
+		# Visual
+		cone_topicV =                   rospy.get_param('/v.topicCone', '/visual/path_map')
+		triangulation_topicV =          rospy.get_param('/v.topicTriangulation', '/visual/delaunay_lines')
+		path_topicV =                   rospy.get_param('/v.topicPath', '/visual/best_tree_branch')
+		
+		self.tfBuffer = tf2_ros.Buffer()
+		listener = tf2_ros.TransformListener(self.tfBuffer)
+
+		# ---------------------------- Subscribers and Publishers -----------------------------
+		# === Subscribers === #
+		rospy.Subscriber(mission_topic, Mission, self.missionCallback)
+		rospy.Subscriber(satate_topic, State, self.stateCallback)
+		rospy.Subscriber(cone_proyection_topic, Track3, self.coneProjectionCallback)
+
+		# === Publishers === #
+		self.pathPub = rospy.Publisher(path_topic, Path, queue_size=1)
+		self.waypointsVisualPub = rospy.Publisher(cone_topicV, MarkerArray, queue_size=1)
+		self.delaunayLinesVisualPub = rospy.Publisher(triangulation_topicV, Marker, queue_size=1)
+		self.bestBranchVisualPub = rospy.Publisher(path_topicV, Marker, queue_size=1)
+		self.bestShapesPub = rospy.Publisher("/visual/shapes", Marker, queue_size=1)
+		self.lapCounterPub = rospy.Publisher(lap_count_topic, Laps, queue_size = 1)
+		self.missionPub = rospy.Publisher("/misc/mission", Mission, queue_size = 1 )
+		self.coneEstPub = rospy.Publisher("/estimation/path_cones", Track3, queue_size=1)
+		self.monitoringPub = rospy.Publisher(monitoring_topic, PathPlan, queue_size=1)
+
+		# ------------------------------- WARNINGS -------------------------------------------
+		if self.tempMap:
+			rospy.logwarn("saveMap turned True because tempMap doesn't work correctly without it")
+			self.saveMap = True
+
+		if self.saveMap:
+			rospy.logwarn("Reminder: saveMap turned on -> you need to provide a good state estimation to the topic: '" +satate_topic + "'")
+
+		rospy.logwarn("PathPlanNode Ready")
+
+		# ------------------------------- LAMBDA FUNCTIONS -----------------------------------
+
+		self.getColor = lambda x: "yellow" if x < len(self.savedYellow) else "blue"
+	
+
+	def __del__(self):
+		"""Object deletion"""
+		rospy.logfatal('PathPlanNode Closed.')
+
+	def missionCallback(self, message):
+		if self.mission == None:
+			self.mission = message.mission
+			laps_mission = {"autocross":1,
+							"trackdrive":10,
+							"manual":0}
+			
+			if self.mission in laps_mission:
+				self.mission_laps = laps_mission[self.mission]
+
+			rospy.logwarn("Received Mission: " + self.mission)
+			rospy.logwarn("Mission laps: "+ str(self.mission_laps))
+
+	def stateCallback(self, state):
+		""" Reads car state """
+		
+		# Origin detection
+		if self.start_point_set:
+			distance_to_origin = vector(Punto(state.x, state.y), self.start_point_position).modulo()
+
+			if self.detected_origin:
+				if distance_to_origin > self.detect_origin_distance:
+					self.detected_origin = False
+					self.lap_count += 1
+					rospy.logwarn("Lap count: " +str(self.lap_count))
+					if self.lap_count > self.mission_laps:
+						msg = Mission()
+						msg.track_complete = True
+						self.missionPub.publish(msg)
+						rospy.logwarn("Track_completed")
+			else:
+				if distance_to_origin < self.detect_origin_distance:
+					self.detected_origin = True
+		else:
+			if not self.has_orange:
+				self.start_point_position = Punto(state.x, state.y)
+				self.start_point_set = True
+
+		# State buffer
+
+		self.state_buffer.append([state.x, state.y, state.yaw, state.header.stamp.to_sec()])
+		
+		if len(self.state_buffer) > 1000:
+			self.state_buffer.pop(0)
+
+	def coneProjectionCallback(self, track):
+		""" Preprocesado de percepción """
+
+		self.has_orange = len(track.cones_orange) > 0
+		if track.header.frame_id == "lidar":
+			return
+		if self.first_cones > 0:
+			self.first_cones-= 1
+			return
+
+		while self.perception_lock or self.processing_lock:
+			pass
+
+		self.perception_lock = True
+
+		self.cones = []
+		#rospy.logwarn("Comes in")
+		try:
+			if self.doStateInterpolation:
+				#rospy.logwarn("Interpol")
+				self.carPosX, self.carPosY, self.carYaw = \
+				state_interpolation(track.header.stamp.to_sec(), np.array(self.state_buffer))
+			elif self.doTFInterpolation:
+				try:
+					trans = self.tfBuffer.lookup_transform('map', 'camera', track.header.stamp)
+					self.carPosX= trans.transform.translation.x
+					self.carPosY= trans.transform.translation.y
+					quat = (trans.transform.rotation.x,trans.transform.rotation.y,trans.transform.rotation.z,trans.transform.rotation.w)
+					orient=tf.transformations.euler_from_quaternion(quat)
+					self.carYaw=orient[2]
+					#rospy.logwarn(str(self.carPosX)+str(self.carPosY)+str(self.carYaw))
+					#rospy.logwarn(self.state_buffer[-1])
+				except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+					rospy.logwarn("No camera transform available")
+			else:
+				self.carPosX, self.carPosY, self.carYaw, _ = self.state_buffer[-1]
+		except ValueError:
+			if len(self.state_buffer) > 0:
+				try:
+					self.carPosX, self.carPosY, self.carYaw, _ = self.state_buffer[-1]
+				except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+					rospy.logwarn("No camera transform available")
+				else:
+					self.carPosX, self.carPosY, self.carYaw = 0.0, 0.0, 0.0
+		except IndexError:
+			self.carPosX, self.carPosY, self.carYaw = 0.0, 0.0, 0.0
+			rospy.logwarn("Pose set to 0")
+
+		self.process_readings(track)
+
+		self.cones = self.mergePoints(self.cones)
+		self.received_readings = len(self.cones) > 0
+
+		self.perception_lock = False
+
+	def process_readings(self, track):
+		car = Punto(self.carPosX, self.carPosY)
+		### CONOS AZULES
+
+		for i in track.cones_blue:
+			cone = self.translate(i)
+			cone.blue = 1
+			cone.w = 2
+
+			self.cones.append(cone)
+
+		### CONOS AMARILLOS
+
+		for i in track.cones_yellow:
+			cone = self.translate(i)
+			cone.yellow = 1
+			cone.w = 2
+
+			self.cones.append(cone)
+
+	def translate(self, cone):
+		pose = np.array([[cone.x], [cone.y]])
+		pose = z_rotation(pose, self.carYaw)
+		pose += np.array([[self.carPosX], [self.carPosY]]).reshape((2,1))
+		
+		return Punto(round(pose[0,0],8), round(pose[1,0],8))
+
+	def mergePoints(self, cones):
+
+		temp = cones[:]
+		final_points = []
+		if len(temp) == 0:
+			return []
+		### Cojemos el primer punto empezando por el más cercano al origen
+		final_points.append(temp.pop(0))
+		actPoint = final_points[-1]
+
+		#Resto de puntos
+		while len(temp) > 0:
+			counter = 0
+			while counter < len(temp):
+				point = temp[counter]
+				if self.distP(actPoint, point) < self.coneDistance:
+					actPoint = midPoint(actPoint, point)
+					final_points[-1] = actPoint
+					temp.pop(counter)
+
+				else:
+					counter += 1
+			if len(temp) == 0:
+				break
+			final_points.append(temp.pop(0))
+			actPoint = final_points[-1]
+
+		return final_points
+
+	def splitPoints(self):
+
+		self.savedBlue = []
+		self.savedYellow = []
+		for i in self.fixed_cones:
+			if i.yellow == -1:
+				self.savedYellow.append(i)
+			elif i.blue == -1:
+				self.savedBlue.append(i)
+			elif (i.w > self.secureWeight) or (not self.saveMap):
+				if i.yellow > i.blue:
+					self.savedYellow.append(i)
+				elif i.blue > i.yellow:
+					self.savedBlue.append(i)
+
+	def distP(self, p1, p2, shouldSqrt = True):
+		""" Distancia entre dos objetos de tipo punto"""
+		distSq = (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2
+		return math.sqrt(distSq) if shouldSqrt else distSq
+
+	def mid_pt(self, pt1, pt2):
+		""" Punto medio entre dos puntos"""
+		new_pt = TrackCone2()
+		new_pt.x = (pt1.x + pt2.x)/2
+		new_pt.y = (pt1.y + pt2.y)/2
+		return new_pt
+
+	# -------------------------- PUBLISHERS -----------------------------------#
+	def publishPointsVisuals(self, points, color, size, ide):
+		""" Publicación visual de los puntos"""
+
+		self.cone_visuals = Marker()
+		self.cone_visuals.header.frame_id = self.world_frame
+		self.cone_visuals.header.stamp = rospy.Time.now()
+		self.cone_visuals.id = ide
+		self.cone_visuals.type = self.cone_visuals.SPHERE_LIST
+		self.cone_visuals.action = self.cone_visuals.ADD
+
+		self.cone_visuals.pose.orientation.w = 0.2
+		self.cone_visuals.scale.x = size*2
+		self.cone_visuals.scale.y = size*2
+		self.cone_visuals.scale.z = size
+
+		self.cone_visuals.color.a = 1.0
+		self.cone_visuals.color.r = color[0]
+		self.cone_visuals.color.g = color[1]
+		self.cone_visuals.color.b = color[2]
+
+		self.cone_visuals.points = points
+
+	def publishTriangulation(self):
+		""" Publicación de las triangulación de los conos"""
+		marker = Marker()
+		marker.header.frame_id = self.world_frame
+		marker.header.stamp = rospy.Time.now()
+		marker.lifetime = rospy.Duration(1)
+		marker.ns = "publishDelaunayLinesVisual"
+
+		marker.type = marker.LINE_LIST
+		marker.action = marker.ADD
+		marker.scale.x = 0.05
+
+		marker.pose.orientation.w = 1
+
+		marker.color.a = 1
+		marker.color.r = 1.0
+		marker.color.b = 1.0
+
+		for edge in self.lines:
+
+			p1 = Point(edge[0].x, edge[0].y, 0)
+			p2 = Point(edge[1].x, edge[1].y, 0)
+
+			marker.points.append(p1)
+			marker.points.append(p2)
+
+		self.delaunayLinesVisualPub.publish(marker)
+
+	def publishBestBranchVisual(self):
+		""" Publicación visual de la línea que une los waypoints"""
+		marker = Marker()
+		marker.header.frame_id = self.world_frame
+		marker.header.stamp = rospy.Time.now()
+		marker.lifetime = rospy.Duration(0.2)
+		marker.ns = "publishBestBranchVisual"
+
+		marker.type = marker.LINE_LIST
+		marker.action = marker.ADD
+		marker.scale.x = 0.1
+
+		marker.pose.orientation.w = 1
+
+		marker.color.a = 0.7
+		marker.color.r = 1.0
+
+		for i in range(len(self.savedPoints)-1):
+			p = Point(self.savedPoints[i].x, self.savedPoints[i].y, 0)
+			marker.points.append(p)
+			p = Point(self.savedPoints[i+1].x, self.savedPoints[i+1].y, 0)
+			marker.points.append(p)
+
+		self.bestBranchVisualPub.publish(marker)
+
+	def publishShapes(self):
+		""" Publicación visual de la línea que une los waypoints"""
+		marker = Marker()
+		marker.header.frame_id = self.world_frame
+		marker.header.stamp = rospy.Time.now()
+		marker.lifetime = rospy.Duration(0.2)
+		marker.ns = "publishShapes"
+
+		marker.type = marker.LINE_LIST
+		marker.action = marker.ADD
+		marker.scale.x = 0.1
+
+		marker.pose.orientation.w = 1
+
+		marker.color.a = 1.0
+		marker.color.g = 1.0
+		if self.blockType == "Lists":
+			for j in self.blockArea:
+				for i in range(len(j)-1):
+					p = Point(j[i].x, j[i].y, 0)
+					marker.points.append(p)
+					p = Point(j[i+1].x, j[i+1].y, 0)
+					marker.points.append(p)
+		elif self.blockType == "Delaunay":
+			for j in self.blockArea:
+				coordenadas = list(j.coords)
+				p = Point(coordenadas[0][0], coordenadas[0][1], 0)
+				marker.points.append(p)
+				p = Point(coordenadas[1][0], coordenadas[1][1], 0)
+				marker.points.append(p)
+
+		self.bestShapesPub.publish(marker)
+
+	def publishEstimatedCones(self):
+		""" Publicación de los waypoints para el piloto automático """
+		path = Track3()
+
+		path.cones_yellow = self.savedYellow
+		path.cones_blue = self.savedBlue
+		path.header.stamp = rospy.Time.now()
+
+		self.coneEstPub.publish(path)
+		return
+
+	def publishPath(self):
+		""" Publicación de los waypoints para el piloto automático """
+		path = Path()
+
+		pointArray = self.savedPoints
+
+		path.path_points = pointArray
+		path.header.stamp = rospy.Time.now()
+
+		self.pathPub.publish(path)
+		return
+	
+	def publishMonitoring(self):
+		""" Publicación de los waypoints para el piloto automático """
+		path = PathPlan()
+		path.header.stamp = rospy.Time.now()
+		interpolated_state = State()
+		interpolated_state.x = self.carPosX
+		interpolated_state.y = self.carPosY
+		interpolated_state.yaw = self.carYaw
+		path.interpolated = interpolated_state
+		for edge in self.lines:
+
+			p1 = Point(edge[0].x, edge[0].y, 0)
+			p2 = Point(edge[1].x, edge[1].y, 0)
+
+			path.triangulation.append(p1)
+			path.triangulation.append(p2)
+
+		if self.blockType == "Lists":
+			for j in self.blockArea:
+				for i in range(len(j)-1):
+					p = Point(j[i].x, j[i].y, 0)
+					path.forbbiden_areas.append(p)
+					p = Point(j[i+1].x, j[i+1].y, 0)
+					path.forbbiden_areas.append(p)
+
+		elif self.blockType == "Delaunay":
+			for j in self.blockArea:
+				coordenadas = list(j.coords)
+				p = Point(coordenadas[0][0], coordenadas[0][1], 0)
+				path.forbbiden_areas.append(p)
+				p = Point(coordenadas[1][0], coordenadas[1][1], 0)
+				path.forbbiden_areas.append(p)
+
+		path.temp_map.cones_yellow = self.savedYellow
+		path.temp_map.cones_blue = self.savedBlue
+
+		path.path_points = self.savedPoints[:]
+		
+
+		self.monitoringPub.publish(path)
+	
+	# -------------------------------------------------------------------------#
+
+	def sortList(self, lista, start = (0.0, 0.0), direct = (0,0), filter_angle = True):
+		""" Ordena los conos seegún la distancia al coche para tratamiento posterior"""
+		#Salvamos los conos para no tener porblemas más adelante
+		temp = lista[:]
+		if len(temp) == 0:
+			return []
+		actual_point = Punto(start[0], start[1])
+		actual_dict = Punto(direct[0], direct[1])
+		############################## ORDENAR CONOS
+		sorted_list = []
+		lowest_index = -1
+		min_dist = 1000
+		coche = Punto(self.carPosX, self.carPosY)
+		i = 0
+		while i < len(temp) :
+			vect = vector(coche, temp[i])
+
+			try:
+				if filter_angle and angle(vect, actual_dict) > math.pi/2:
+					temp.pop(i)
+				else:
+					i+=1
+
+			except ValueError:
+				temp.pop(i)
+			except ZeroDivisionError:
+				temp.pop(i)
+
+		if len(temp) == 0:
+			return []
+
+		rospy.logwarn
+		#Primer cono
+		for i,cone  in enumerate(temp):
+			act_dist = self.distP(cone, coche)
+
+			if act_dist  < min_dist:
+				lowest_index = i
+				min_dist = act_dist
+
+		sorted_list.append(temp.pop(lowest_index))
+
+		#Resto de conos
+		while len(temp) > 0:
+			lowest_index = -1
+			min_dist = 1000
+
+			for i,cone  in enumerate(temp):
+				act_dist = self.distP(cone, coche)
+				if act_dist  < min_dist:
+					lowest_index = i
+					min_dist = act_dist
+			sorted_list.append(temp.pop(lowest_index))
+		return sorted_list
+
+	def createWaypoints(self):
+		""" CREAR PUNTOS DEL MEDIO """
+		# concatena yellow_cones con blue_cones
+		self.yellow_points = pntArrayToNpArray(self.savedYellow)
+		self.blue_points = pntArrayToNpArray(self.savedBlue)
+
+		self.points = pntArrayToNpArray(self.savedYellow + self.savedBlue)
+		
+
+		self.break_distance = np.sqrt(5*2) #Distance that breaks triangulation
+		
+		self.secure_distance = 1.3 #Distance that merge cones
+
+		self.side = {"yellow": 1, "blue": -1}
+
+		self.addy_list, self.blue_lines, self.yellow_lines =  \
+			create_addy_list(self.points, len(self.savedYellow))
+
+		self.groups = self.create_midpoints_groups()
+
+		self.block_area = npArrayToShapelyLines(self.blue_lines) + \
+							 npArrayToShapelyLines(self.yellow_lines)
+		  
+		""" Computes the middle line of the track """
+
+		midline = [np.array([self.carPosX, self.carPosY])]
+		lines = []
+
+		if len(self.points) <= 1:
+			return [[], [], []] # return empty lists
+		
+		# known points needed for calculus
+		pre_point = None
+		next_point = None
+
+		used_points = {i:False for i in range(len(self.points))}
+		
+		# while there are points to calculate
+		while True:
+			
+			minIndex = minDistanceIndex(self.points, midline[-1], used_points)
+			
+			if minIndex == -1: break
+
+			used_points[minIndex] = True
+
+			for i in self.groups:
+				if minIndex in self.groups[i]["indexes"]:
+					midpoints = self.groups[i]["mid_points"]
+					#midpoints = merge_points(midpoints, self.secure_distance)
+
+					for j in self.groups[i]["indexes"]:
+						used_points[j] = True
+					
+					# junta los puntos de los grupos
+					while len(midpoints) > 0:
+
+						minIndex = minDistanceIndex(midpoints, midline[-1], None)
+						new_middle_point = np.array(midpoints[minIndex])
+						if intersection_lines(LineString([new_middle_point, midline[-1]]), self.block_area):
+							break
+						else:
+							midpoints.pop(minIndex)
+							midline.append(new_middle_point)
+					pre_point = None
+					break
+			else:
+				# aquí va mono
+				actual_point = self.points[minIndex]
+				# check there are not intersections between the last midpoint
+				# and the next viable point
+				try:
+					vec = actual_point-midline[-1]
+					# secure distance to ensure we dont intersect with the point itself
+					next_point_approx = midline[-1]+0.99*vec 
+					# draw the line between the last midpoint and the next point approx
+					if intersection_lines(LineString([midline[-1], next_point_approx]), self.block_area):
+						continue
+				except TopologicalError:
+					continue
+				
+				# check the next point doesn't imply going backwards
+				try:
+					if get_angle(midline[-1]-midline[-2], actual_point-midline[-1]) > 150:
+							continue
+				except IndexError:
+					pass 
+
+				# iteares over the possible points till finds one viable
+				
+				temp_used_cones = used_points.copy()
+				not_empty = True
+				while not_empty:
+					minIndex = minDistanceIndex(self.points, actual_point, temp_used_cones)
+					if minIndex == -1: 
+						not_empty = False
+						continue
+					next_point = self.points[minIndex]
+					temp_used_cones[minIndex] = True
+					
+					try:
+						new_middle_point = self.getMono(next_point, actual_point, pre_point, minIndex)
+						new_line = [new_middle_point, actual_point]
+					except UnviablePath:
+						continue
+							
+					# Check new midline viability
+					try:
+						# New mid point can't be close to last one
+						if np.linalg.norm(new_middle_point-midline[-1]) < self.secure_distance:
+							continue
+						# New mid point can't create hard turns
+						if get_angle(midline[-1]-midline[-2], new_middle_point-midline[-1]) > 150:
+							continue
+
+						if intersection_lines(LineString([new_middle_point, midline[-1]]), self.block_area):
+							continue
+
+					except IndexError:
+						pass
+
+					lines.append(new_line)
+					midline.append(new_middle_point)
+					break        
+				else:
+					break
+				pre_point = np.array(actual_point)
+
+		if (type(pre_point) != type(None)):
+			minIndex = minDistanceIndex(self.points, pre_point)
+			try:
+				if self.getColor(minIndex) == "yellow":
+					minIndex = len(self.yellow_points) + 100
+				else:
+					minIndex = len(self.yellow_points) - 100
+
+				new_middle_point = self.getMono(pre_point, next_point, None, minIndex)
+				new_line = [new_middle_point, actual_point]
+
+				lines.append(new_line)
+				midline.append(new_middle_point)
+			except UnviablePath:
+				pass
+		
+
+		new_x = np.array(midline)[:,0]
+		new_y = np.array(midline)[:,1]
+		new_points = []
+		for i in range(len(new_x)):
+			new_points.append(Punto(new_x[0], new_y[0]))
+
+		self.savedPoints = new_points
+
+	def getMono(self, next_point, actual_point, pre_point, act_index):
+		
+		if type(pre_point) != type(None) : # smooth curve
+			if np.linalg.norm(np.array(pre_point)-np.array(actual_point))< 1.3:
+				raise UnviablePath
+			vector = np.array(next_point) - np.array(pre_point)
+		else: # first point
+			vector = np.array(next_point) - np.array(actual_point)
+		
+		
+		if np.linalg.norm(vector) < 1.3:
+			raise UnviablePath
+		# create perpendicular vector taking in account the
+		# track size
+		vector = vector / np.linalg.norm(vector)
+		rotated_vector = np.array([vector[1], -vector[0]])
+		rotated_vector = rotated_vector * self.side[self.getColor(act_index)]\
+						 * self.track_size
+
+		new_middle_point = np.array(actual_point) + rotated_vector
+
+		try:
+			temp_middle_point = np.array(next_point) + rotated_vector
+			# for 1 color case
+			# the intersection between the new midpoint and the new midpoint if it
+			# existed on the new point can't intersect with the blocked area
+			if intersection_lines(LineString([new_middle_point, temp_middle_point]), self.block_area):
+				raise UnviablePath
+		except TopologicalError:
+			raise UnviablePath
+
+		return new_middle_point
+
+	def create_midpoints_groups(self):
+		if len(self.addy_list) == 0:
+			return []
+
+		not_used = {i:True for i in self.addy_list}
+		completed = True
+
+		group_with_mid_points = {}
+
+		while completed:
+			for i in not_used:
+				if not_used[i]:
+					queue = [i]
+					break
+			group = []
+			mid_points_group = []
+
+			while len(queue) > 0:
+				current_point = queue.pop(0)
+				not_used[current_point] = False
+
+				for i in self.addy_list[current_point]:
+					if not_used[i]:
+						mid_points_group.append([(self.points[current_point][0] + self.points[i][0])/2, \
+							(self.points[current_point][1] + self.points[i][1])/2])
+						
+						self.addy_list[i].remove(current_point)
+						queue.append(i)
+						not_used[i] = False
+				
+				group.append(current_point)
+			
+			if len(mid_points_group) > 0:
+				group_with_mid_points[len(group_with_mid_points.keys())] = \
+					{"indexes":group, "mid_points":mid_points_group}
+
+			completed = False
+
+			for i in not_used:
+				if not_used[i]:
+					completed = True
+			
+		return group_with_mid_points
+
+	def cleanCones(self):
+		""" Deletes de cones that haven't been see in a while and fixes the maximum
+			lifetime to 100 """
+		cleanedCones = []
+		for i in self.fixed_cones:
+			i.w -= 1
+			if i.w >= 0:
+				cleanedCones.append(i)
+		self.fixed_cones = cleanedCones
+
+	def extendMidline(self):
+		if len(self.savedPoints) > 1:
+			pre_vec = vector(self.savedPoints[1], self.savedPoints[0])
+			modulo_vec = pre_vec.modulo()
+			pre_vec.x /= modulo_vec
+			pre_vec.y /= modulo_vec
+			pre_point = Punto(self.savedPoints[0].x + pre_vec.x, self.savedPoints[0].y + pre_vec.y)
+
+			post_vec = vector(self.savedPoints[-2], self.savedPoints[-1])
+			modulo_vec = post_vec.modulo()
+			post_vec.x /= modulo_vec
+			post_vec.y /= modulo_vec
+			post_point = Punto(self.savedPoints[-1].x + post_vec.x, self.savedPoints[-1].y + post_vec.y)
+
+			self.savedPoints.insert(0, pre_point)
+			self.savedPoints.append(post_point)
+
+	def calcAll(self):
+		""" Equivalente al main de la clase """
+
+		if self.loop_end: # Solo se ejecuta mientras no se haya cerrado el circuito
+			rospy.logfatal("Cerrando nodo, primera vuelta done")
+			return False
+
+		if not self.received_readings:
+			return True
+
+		self.received_readings = False
+		#rospy.logwarn("Entrando en calcAll")
+		self.processing_lock = True
+
+		if self.saveMap:
+			self.fixed_cones += self.cones[:]
+			self.fixed_cones = self.mergePoints(self.fixed_cones)
+		else:
+			self.fixed_cones = self.cones[:]
+
+		""" PUBLICAR WAYPOINTS """
+		cone_array = MarkerArray()
+		
+		self.splitPoints()
+
+		self.publishEstimatedCones()
+
+		self.savedBlue   = self.sortList(self.savedBlue,  (self.carPosX, self.carPosY) , (math.cos(self.carYaw), math.sin(self.carYaw)))
+
+		self.savedYellow = self.sortList(self.savedYellow, (self.carPosX, self.carPosY), (math.cos(self.carYaw), math.sin(self.carYaw)))
+
+		self.publishPointsVisuals(self.savedYellow, (1,1,0), 0.2, 0)
+		cone_array.markers.append(self.cone_visuals)
+		self.publishPointsVisuals(self.savedBlue, (0,0,1), 0.2, 1)
+		cone_array.markers.append(self.cone_visuals)
+
+		self.createWaypoints()
+
+		if False: #FIXME: self.doBackwardsTriangulation:
+			
+			temp_waypoints = self.savedPoints[:]
+
+			temp_area = self.blockArea[:]
+
+			self.splitPoints()
+			
+			self.carYaw += np.pi
+			self.carYaw %= 2*np.pi
+
+			temp_yellow   = self.sortList(self.savedBlue,  (self.carPosX, self.carPosY) , (math.cos(self.carYaw), math.sin(self.carYaw)))
+
+			temp_blue = self.sortList(self.savedYellow, (self.carPosX, self.carPosY), (math.cos(self.carYaw), math.sin(self.carYaw)))
+
+			self.savedYellow = temp_yellow
+			self.savedBlue   = temp_blue
+
+			self.publishPointsVisuals(self.savedBlue, (1,1,0), 0.2, 2)
+			cone_array.markers.append(self.cone_visuals)
+			self.publishPointsVisuals(self.savedYellow, (0,0,1), 0.2, 3)
+			cone_array.markers.append(self.cone_visuals)
+
+			self.createWaypoints()
+			
+			self.savedPoints = self.savedPoints[::-1]+temp_waypoints
+			self.blockArea += temp_area
+
+		if False: # FIXME:self.doExtendLine:
+			self.extendMidline()
+		
+		if False: # FIXME: self.doSplineInterpolation:
+			if len(self.savedPoints) > 3:
+				puntos = pntArrayToNpArray(self.savedPoints)
+				tck, u = splprep(puntos.T, u=None, s=0.0) # Interpolación
+				u_new = np.arange(0, 1.01, 1.0/(10*len(u)))
+				x_new, y_new = splev(u_new, tck, der = 0) # Interpolacion
+
+				self.savedPoints = [Punto(i,k) for i,k in zip(x_new, y_new)]
+
+		
+		if self.tempMap: self.cleanCones()
+
+		self.processing_lock = False
+
+		if self.doPublishConePrediction:
+			self.waypointsVisualPub.publish(cone_array)
+
+		self.publishPath()
+
+		if self.doPublishMiddleLine:
+			self.publishBestBranchVisual()
+
+		if self.doPublishTriangulation:
+			self.publishTriangulation()
+			self.publishShapes()
+		
+		if self.doMonitoring:
+			self.publishMonitoring() 
+			
+
+		lap_msg = Laps()
+
+		lap_msg.laps = self.lap_count
+		lap_msg.loop_closure = self.lap_count > 1
+		self.lapCounterPub.publish(lap_msg)
+
+		return True
+
+if __name__ == '__main__':
+	"""depractaed MAIN"""
+	rospy.logfatal("WRONG CALL, import class PathPlanNode from a ROS node")
