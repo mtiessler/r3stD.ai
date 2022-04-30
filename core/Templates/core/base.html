@@ -23,9 +23,9 @@
         <nav class="navbar navbar-light bg-light static-top">
             <div class="container">
                 <a href="{% url 'home' %}"><img src="{% static 'core\assets\img\Logo_Restb.webp' %}"  alt="logo"></a>
-                <a class="navbar-brand" href="{% url 'aboutus' %}">About Us</a>
-                <a class="navbar-brand" href="{% url 'docs' %}">Documentation</a>
-                <a class="navbar-brand" href="#!">Devpost</a>
+                <a class="navbar-brand" style="color: #f7941d" href="{% url 'aboutus' %}">About Us</a>
+                <a class="navbar-brand" style="color: #f7941d" href="{% url 'docs' %}">Documentation</a>
+                <a class="navbar-brand" style="color: #f7941d" href="#!">Devpost</a>
             </div>
         </nav>
         {% block content %}
