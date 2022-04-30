@@ -11379,3 +11379,17 @@ footer.footer {
   padding-top: 4rem;
   padding-bottom: 4rem;
 }
+
+[class^="bi-"]::before,
+[class*=" bi-"]::before {
+  display: inline-block;
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+  font-weight: normal !important;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  vertical-align: -.125em;
+  -webkit-font-smoothing: antialiased;
+  color: #f7941d;-moz-osx-font-smoothing: grayscale;
+}
