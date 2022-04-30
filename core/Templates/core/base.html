@@ -8,7 +8,7 @@
         <meta name="author" content="" />
         <title>{% block title %}{%endblock%} | r3stD.ai</title>
         <!-- Favicon-->
-        <link rel="icon" type="image/x-icon" href="{% static 'core/assets/favicon.ico' %}" />
+        <link rel="icon" type="image/x-icon" href="{% static 'core/assets/img/59137.jpg' %}" />
         <!-- Bootstrap icons-->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" type="text/css" />
         <!-- Google fonts-->
@@ -22,6 +22,7 @@
         <!-- Navbar-->
         <nav class="navbar navbar-light bg-light static-top">
             <div class="container">
+                <a href="{% url 'home' %}"><img  src="{% static 'core/assets/img/59137.jpg' %}" height="50px" width="50px" alt="..."/></a>
                 <a class="navbar-brand" style="color: #f7941d" href="{% url 'aboutus' %}">About Us</a>
                 <a class="navbar-brand" style="color: #f7941d" href="{% url 'docs' %}">Documentation</a>
                 <a class="navbar-brand" style="color: #f7941d" href="#!">Devpost</a>
