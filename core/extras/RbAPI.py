@@ -68,4 +68,3 @@ class RbAPI:
             return None
 
         return data['response']
-

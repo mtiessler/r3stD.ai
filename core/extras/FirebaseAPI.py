@@ -21,9 +21,9 @@ class FirebaseAPI:
     def save_images(self, uuid, images_folder_path):
         img_file_names = next(os.walk(images_folder_path), (None, None, []))[2]
         for img_file_name in img_file_names:
-            self.storage.child(uuid).child(img_file_name).put(images_folder_path + img_file_name)
+            self.storage.child(uuid).child('images').child(img_file_name).put(images_folder_path + img_file_name)
 
-        return true
+        return True
 
 
 fb_wrapper = FirebaseAPI()
