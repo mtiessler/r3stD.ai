@@ -36,7 +36,7 @@ def upload(request):
         
 
         if mytrans is None:
-            os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --images '+OUT_PATH+' --aabb_scale 2 --out '+ TRANSFORMS_PATH)
+            os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --aabb_scale 2  --images '+OUT_PATH+' --out '+ TRANSFORMS_PATH)
          
         os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh output.obj --near_distance 0.5')
         
