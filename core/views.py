@@ -6,8 +6,7 @@ import requests
 
 INTERNAL = '0c8d-79-156-141-48.eu.ngrok.io'
 
-def home(request):
-    return render(request, "core/tryout.html")
+
 @csrf_exempt
 def upload(request):
     if request.method == 'POST' and request.FILES['file']:
@@ -21,3 +20,16 @@ def upload(request):
         return HttpResponse("<h1>FILE UPLOADED OK</h1>")
     else:
         return HttpResponse("<h1>FILE NOT UPLOADED OK</h1>")
+
+
+def home(request):
+    return render(request, "core/index.html")
+
+def about(request):
+    return render(request, 'core/about.html')
+
+def docs(request):
+    return render(request, 'core/documentation.html')
+
+def results(request):
+    return render(request, 'core/result.html')
