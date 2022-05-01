@@ -5,6 +5,21 @@
 colmap.*
 # Created by https://www.toptal.com/developers/gitignore/api/django
 # Edit at https://www.toptal.com/developers/gitignore?templates=django
+/.vscode
+/.vs
+/build*
+/figures
+/out
+/results
+/tmp
+/venv
+/video
+/*.json
+*.msgpack
+*.training
+__pycache__
+.DS_Store
+imgui.ini
 
 ### Django ###
 *.log
