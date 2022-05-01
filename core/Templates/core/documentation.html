@@ -6,82 +6,87 @@ Technologies
 {% block content %}
 {% load static %}
 
-<section class="showcase">
-    <div class="container-fluid p-0">
-        <div class="row g-0">
-            <div class="col-lg-6 order-lg-2 text-white showcase-img"><a href="https://restb.ai/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/Restb_ai_Logo_Real_Estate.webp' %}" alt="..." /></a></div>
-            <div class="col-lg-6 order-lg-1 my-auto showcase-text">
-                <h2>Api Restb.ai</h2>
-                <p class="lead mb-0">Builds proprietary A.I. and computer vision solutions to help real estate companies maximize the value of their digital assets.</p>
-            </div>
-        </div>
+<section class="testimonials text-center bg-light">    
+        <div class="container">
+            <h2 class="mb-5">Technologies</h2>
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://restb.ai/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/Restb_ai_Logo_Real_Estate.webp' %}" alt="..." /></a>
+                            <h5 style="color: #f7941d">Restb.ai</h5>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://www.djangoproject.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/django.jpg' %}" alt="..." /></a>                        <h5 style="color: #f7941d">Max Tiessler</h5>
+                    </div>
+                </div>
 
-        
-        <div class="row g-0">
-            <div class="col-lg-6 text-white showcase-img"><a href="https://www.djangoproject.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/django.jpg' %}" alt="..." /></a></div>
-            <div class="col-lg-6 my-auto showcase-text">
-                <h2>Django</h2>
-                <p class="lead mb-0">A high-level Python web framework that encourages rapid development and clean, pragmatic design. Built by experienced developers, it takes care of much of the hassle of web development, so you can focus on writing your app without needing to reinvent the wheel. It’s free and open source.</p>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://ngrok.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/ngrok.png' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">Ngrok</h5>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://www.matthewtancik.com/nerf" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/nerf.jpg' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">NeRF</h5>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 order-lg-2 text-white showcase-img"><a href="https://ngrok.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/ngrok.png' %}" alt="..." /></a></div>
-            <div class="col-lg-6 order-lg-1 my-auto showcase-text">
-                <h2>Ngrok</h2>
-                <p class="lead mb-0">A globally distributed reverse proxy fronting your web services running in any cloud or private network, or your machine</p>
-            </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 text-white showcase-img"><a href="https://www.matthewtancik.com/nerf" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/nerf.jpg' %}" alt="..." /></a></div>
-            <div class="col-lg-6 my-auto showcase-text">
-                <h2>NeRF</h2>
-                <p class="lead mb-0">A method for synthesizing novel views of complex scenes by optimizing an underlying continuous volumetric scene function using a sparse set of input views.</p>
-            </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 order-lg-2 text-white showcase-img"><a href="https://colmap.github.io/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/colmap.gif' %}" alt="..." /></a></div>
-            <div class="col-lg-6 order-lg-1 my-auto showcase-text">
-                <h2>COLMAP</h2>
-                <p class="lead mb-0">A general-purpose Structure-from-Motion (SfM) and Multi-View Stereo (MVS) pipeline with a graphical and command-line interface. It offers a wide range of features for reconstruction of ordered and unordered image collections.</p>
-            </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 text-white showcase-img"><a href="https://getbootstrap.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/bootstrap.jpg' %}" alt="..." /></a></div>
-            <div class="col-lg-6 my-auto showcase-text">
-                <h2>Bootstrap</h2>
-                <p class="lead mb-0">Quickly design and customize responsive mobile-first sites with Bootstrap, the world’s most popular front-end open source toolkit, featuring Sass variables and mixins, responsive grid system, extensive prebuilt components, and powerful JavaScript plugins.</p>
-            </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 order-lg-2 text-white showcase-img"><a href="https://firebase.google.com/?gclid=Cj0KCQjwvLOTBhCJARIsACVldV39r4ovpTF4tTRNJ7a041ptkusIQSDWhg7Q1dpyKJn7cUa37s2e7YAaAp0GEALw_wcB&gclsrc=aw.ds" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/firebase.webp' %}" alt="..." /></a></div>
-            <div class="col-lg-6 order-lg-1 my-auto showcase-text">
-                <h2>Firebase</h2>
-                <p class="lead mb-0">Is a Backend-as-a-Service (Baas). It provides developers with a variety of tools and services to help them develop quality apps, grow their user base, and earn profit. It is built on Google's infrastructure. Firebase is categorized as a NoSQL database program, which stores data in JSON-like documents.</p>
-            </div>
-        </div>
 
-        <div class="row g-0">
-            <div class="col-lg-6 text-white showcase-img"><a href="https://www.sketchup.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/sketchup.jpg' %}" alt="..." /></a></div>
-            <div class="col-lg-6 my-auto showcase-text">
-                <h2>SketchUp</h2>
-                <p class="lead mb-0">Is a suite of subscription products that include SketchUp Pro Desktop, a 3D modeling computer program for a broad range of drawing and design applications — including architectural, interior design, industrial and product design, landscape architecture, civil and mechanical engineering, theater, film and video game development.</p>
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://colmap.github.io/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/colmap.png' %}" alt="..." /></a>
+                            <h5 style="color: #f7941d">COLMAP</h5>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://getbootstrap.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/bootstrap.jpg' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">Bootstrap</h5>
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://firebase.google.com/?gclid=Cj0KCQjwvLOTBhCJARIsACVldV39r4ovpTF4tTRNJ7a041ptkusIQSDWhg7Q1dpyKJn7cUa37s2e7YAaAp0GEALw_wcB&gclsrc=aw.ds" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/firebase.webp' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">Firebase</h5>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://sketchfab.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/sketchfub.jpeg' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">Sketchfab</h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://www.blender.org/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/blender.png' %}" alt="..." /></a>
+                            <h5 style="color: #f7941d">Blender</h5>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="https://3dscannerapp.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/3dscanner.png' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">3D Scanner App</h5>
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <div class="testimonial-item mx-auto mb-5 mb-lg-0">
+                        <a href="http://www.open3d.org/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/Open3D.png' %}" alt="..." /></a>
+                        <h5 style="color: #f7941d">La nueva</h5>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="row g-0">
-            <div class="col-lg-6 order-lg-2 text-white showcase-img"><a href="https://www.blender.org/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/blender.png' %}" alt="..." /></a></div>
-            <div class="col-lg-6 order-lg-1 my-auto showcase-text">
-                <h2>Blender</h2>
-                <p class="lead mb-0">Is the free and open source 3D creation suite. It supports the entirety of the 3D pipeline—modeling, rigging, animation, simulation, rendering, compositing and motion tracking, even video editing and game creation. Advanced users employ Blender’s API for Python scripting to customize the application and write specialized tools; often these are included in Blender’s future releases.</p>
-            </div>
-        </div>
-        <div class="row g-0">
-            <div class="col-lg-6 text-white showcase-img"><a href="https://3dscannerapp.com/" target="_blank"><img class="img-fluid rounded-circle mb-3" src="{% static 'core/assets/img/3dscanner.png' %}" alt="..." /></a></div>
-            <div class="col-lg-6 my-auto showcase-text">
-                <h2>SketchUp</h2>
-                <p class="lead mb-0">Is a desktop tool for processing photos and videos into 3D models using the power of Photogrammetry. Perfect for 3D Design, CAD, Architecture, Games Assets, AR, VR, XR. Share USDZ models via iMessage to let friends and family see your models in Augmented Reality. Photogrammetry is done using the new Object Capture API on supported hardware.</p>
-            </div>
-        </div>
-    </div>
+       
 </section>
 
 {% endblock %}
