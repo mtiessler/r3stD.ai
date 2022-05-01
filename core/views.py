@@ -35,7 +35,7 @@ def upload(request):
             video2frames(myvideo.name, mytrans is not None)
             if mytrans is None:
                 os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --aabb_scale 2  --images '+OUT_PATH+' --out '+ TRANSFORMS_PATH)
-            # os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\output.obj --near_distance 0.5')
+            os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\output.obj --near_distance 0.5')
             files = os.listdir(OUT_PATH)
             if mytrans is not None:
                 os.remove(TRANSFORMS_PATH)
