@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.views.decorators.csrf import csrf_exempt
+import requests
 import shutil
 import cv2
 import os
@@ -9,46 +10,36 @@ import uuid
 
 from core.extras.FirebaseAPI import FirebaseAPI 
 
-INTERNAL = '0c8d-79-156-141-48.eu.ngrok.io'
+
 OUT_PATH = 'C:\\Users\\Max\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\images'
 TRANSFORMS_PATH = r"C:\Users\Max\Desktop\hackupc2022\3dmodule\data\nerf\userScene\transforms.json"
 
 @csrf_exempt
 def upload(request):
-    print(request.FILES)
-    if request.method == 'POST' and request.FILES['video']:
-
-        myvideo = request.FILES['video']
-        fs = FileSystemStorage()
-        _ = fs.save(myvideo.name, myvideo)
-        mytrans = None
-        print(request.FILES)
-        if 'transforms' in request.FILES:
-            mytrans = request.FILES['transforms']
+    if request.method == 'POST':
+        if 'obj' in request.FILES:
+            pass #to be implemented
+        elif 'video' in request.FILES:    
+            myvideo = request.FILES['video']
             fs = FileSystemStorage()
-            transform = fs.save(mytrans.name, mytrans)
-            shutil.move('media/'+mytrans.name, TRANSFORMS_PATH)
-        video2frames(myvideo.name, mytrans is not None)
-
-        fa = FirebaseAPI()
-        fa.save_images(uuid.uuid4().hex, "C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\images\\", 1)
-
-        
-
-        if mytrans is None:
-            os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --aabb_scale 2  --images '+OUT_PATH+' --out '+ TRANSFORMS_PATH)
-         
-        os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh output.obj --near_distance 0.5')
-        
-        files = os.listdir(OUT_PATH)
-
-        if mytrans is not None:
-            os.remove(TRANSFORMS_PATH)
-        for file in files:
-            os.remove(OUT_PATH+"\\"+file)
+            _ = fs.save(myvideo.name, myvideo)
+            mytrans = None
+            if 'transforms' in request.FILES:
+                mytrans = request.FILES['transforms']
+                fs = FileSystemStorage()
+                transform = fs.save(mytrans.name, mytrans)
+                shutil.move('media/'+mytrans.name, TRANSFORMS_PATH)
+            video2frames(myvideo.name, mytrans is not None)
+            if mytrans is None:
+                os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --aabb_scale 2  --images '+OUT_PATH+' --out '+ TRANSFORMS_PATH)
+            os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\output.obj --near_distance 0.5')
+            files = os.listdir(OUT_PATH)
+            if mytrans is not None:
+                os.remove(TRANSFORMS_PATH)
+            for file in files:
+                os.remove(OUT_PATH+"\\"+file)
         
         return redirect('results')
-   
     else:
         return redirect('')
 
