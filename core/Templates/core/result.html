@@ -1,9 +1,153 @@
 {% extends 'core/base.html' %}
+{% block title %}
+Result
+{% endblock %}
 
-{% block title %} Results {% endblock %}
+{% block content %}
+{%load static %}
+<p style="align: center;">
+<iframe width=1000 height=500 id='api-frame2'  title="Spooky Death Knight" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/b9fc50c9b9df4902b37a58f6990d2809/embed">
+</iframe>
+</p>
 
-{% block content %}  
-    <div style="margin: auto;" class="sketchfab-embed-wrapper"> 
-        <p align="center"><iframe  width=800 height=800 title="Mad Car 8k resolution" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/f6564f28bd7b42829e3463a9a5d2ecc1/embed"> </iframe> </p>
-    </div> 
+
+
+<script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.0.js"></script>
+
+<script type="text/javascript">
+//--------------------------------------
+// Elevation API / Helladic info
+ 
+// From CSV file ("center_3857" column)
+var sitePosition = [2578556.817354348,4499336.592950092,117.15160369873047];
+var siteId = "C1062";
+var cameraHeightAboveMeters = 300;
+// From CSV file ("other_sites_3857" column)
+
+
+
+var other_sites = "Tile floor:[0.281313, 0.615842, -1.09309]|Refrigerator:[-0.5520006, -0.60083, -0.5]|Oven:[-0.443044, 0.924892, -0.31088]";
+
+var uid = 'a64d011bd74d43229e5b1429285cc0b4';
+//-
+//--------------------------------------
+
+// Sketchfab Viewer API: Start/Stop the viewer
+var version = '1.12.0';
+var iframe = document.getElementById('api-frame2');
+var client = new window.Sketchfab(version, iframe);
+var postProcessingFilters = {
+        enable: true,
+        sharpenEnable: true,
+        vignetteEnable: true,
+        ssaoEnable: true
+        };
+
+var error = function() {
+    console.error('Sketchfab API error');
+};
+
+var success = function(api) {
+    api.addEventListener('viewerstart', function() {
+        console.log('viewerstart');
+       
+       
+    });
+    api.addEventListener('viewerstop', function() {
+        console.log('viewerstop');
+    });
+
+    api.start(function() {
+        api.start();
+       
+        function addAnnotations() {
+           
+           var other_sites_arr = other_sites.split("|");
+
+           api.getCameraLookAt(function(err, camera) {
+                console.log(camera.position);
+                console.log(camera.target);
+
+                other_sites_arr.forEach(site => {
+                    var idAndPos = site.split(":");
+                    var id = idAndPos[0];
+                    var pos = JSON.parse(idAndPos[1]);
+
+                    api.createAnnotationFromScenePosition(
+                        Array.from(pos), // center_3857 from csv file
+                        [pos[0], pos[1] - 0.3 , pos[2] + 0.3 ],//[pos[0], pos[1] - 200 , pos[2] +cameraHeightAboveMeters ], // camera.position = center_3857 - 200m(y) + 500m(z)
+                        pos, // camera.target: same as center_3857
+                        id,
+                        '',
+                        function(err, index) {
+                            if(!err) {
+                                console.log('Created new annotatation for ' + id, index + 1);
+                            }
+                        }
+                        );
+
+                });
+
+            });
+           
+        };
+
+        api.addEventListener('viewerready', function() {
+            console.log('viewerReady');
+            api.setPostProcessing(postProcessingFilters, function() {
+                console.log('Post-processing filters set');
+            });
+
+            addAnnotations();
+        });
+    });
+};
+client.init(uid, {
+    success: success,
+    error: error,
+    autostart: 1,
+    autospin: 0, //0.2,
+    preload: 1
+});
+//////////////////////////////////
+// GUI Code
+//////////////////////////////////
+function initGui() {
+    var buttonsText = '';
+    buttonsText += '<button id="start">Start</button>';
+    buttonsText += '<button id="stop">Stop</button>';
+}
+initGui();
+
+//////////////////////////////////
+// GUI Code end
+//////////////////////////////////
+
+</script>
+    
+    <div class="row" style="margin:auto;">
+        <div class="column">
+           <img height=200 width=200 src="{% static 'core/assets/img/0.png' %}">
+           <img height=200 width=200 src="{% static 'core/assets/img/1.png' %}">
+        </div>
+        <div class="column">
+           <img height=200 width=200 src="{% static 'core/assets/img/2.png' %}">
+           <img height=200 width=200 src="{% static 'core/assets/img/3.png' %}">
+        </div>
+
+        <div class="column">
+           <img height=200 width=200 src="{% static 'core/assets/img/4.png' %}">
+           <img height=200 width=200 src="{% static 'core/assets/img/5.png' %}">
+        </div>
+
+
+        <div class="column">
+           <img height=200 width=200 src="{% static 'core/assets/img/6.png' %}">
+           <img height=200 width=200 src="{% static 'core/assets/img/7.png' %}">
+
+        </div>
+    </div>    
+
+    <div class="sketchfab-embed-wrapper">
+
 {% endblock %}

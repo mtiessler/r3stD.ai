@@ -1,6 +1,9 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.views.decorators.csrf import csrf_exempt
+from .extras.FirebaseAPI import FirebaseAPI
+from .extras.SkfabAPI import SkfabAPI
+from .extras.RbAPI import RbAPI
 import requests
 import shutil
 import cv2
@@ -32,13 +35,12 @@ def upload(request):
             video2frames(myvideo.name, mytrans is not None)
             if mytrans is None:
                 os.system('python C:/Users/Max/Desktop/hackupc2022/3dmodule/scripts/colmap2nerf.py --run_colmap --colmap_matcher exhaustive --aabb_scale 2  --images '+OUT_PATH+' --out '+ TRANSFORMS_PATH)
-            os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\output.obj --near_distance 0.5')
+            # os.system('python 3dmodule/scripts/run.py --scene C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene --mode nerf --n_steps 2000 --save_mesh C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\output.obj --near_distance 0.5')
             files = os.listdir(OUT_PATH)
             if mytrans is not None:
                 os.remove(TRANSFORMS_PATH)
             for file in files:
                 os.remove(OUT_PATH+"\\"+file)
-        
         return redirect('results')
     else:
         return redirect('')
@@ -54,7 +56,33 @@ def docs(request):
     return render(request, 'core/documentation.html')
 
 def results(request):
-    return render(request, 'core/result.html')
+    fb_uuid = uuid.uuid4().hex
+    model_images_folder_path = 'C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\model_images\\' # TODO
+ 
+    fb = FirebaseAPI()
+    rb = RbAPI()  
+
+    ok = fb.save_model_images(fb_uuid, model_images_folder_path)
+    if not ok:
+        return "Failed to save images to FirebaseAPI"
+
+    images = []
+    model_image_links = fb.load_model_image_links(fb_uuid)
+    for link in model_image_links:
+        annotations = rb.get_all_data(link)
+        images.append({'link': link, 'annotations': annotations})
+
+    # A su vez, como tenemos el OBJ, lo subimos a sketchfab
+    # Una vez subido, accedemos a la URL para obtener el UID del sketch
+    # Finalmente pasamos este UID a la template de results para cargar el sketch en el iframe
+    model_path = 'C:\\Users\\Max\\Desktop\\hackupc2022\\3dmodule\\data\\nerf\\userScene\\scan.obj' # TODO
+    model_url = SkfabAPI.upload_model(model_path)
+    sketch_uid = model_url.split('/')[-1]
+    
+    #get_result = requests.get(model_url)
+    #print(get_result.json()['uid'])
+    print(sketch_uid, images)
+    return render(request, 'core/result.html', {'images': images, 'annotations': annotations, 'sketch_uid': sketch_uid})
 
 
 def video2frames(name, hasTransform):

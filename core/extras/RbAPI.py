@@ -1,3 +1,7 @@
+import requests 
+import json
+
+
 class RbAPI: 
     # Should be treated as a Singleton to exploit cache
 

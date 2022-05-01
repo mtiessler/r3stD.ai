@@ -72,7 +72,6 @@ class SkfabAPI:
             'name': 'Result model',
             'description': 'Result model from your picture(s)S',
             'tags': ['restbai'],  # Array of tags,
-            'categories': ['homes'],  # Array of categories slugs,
             'license': 'by',  # License slug,
             'isPublished': True,
             'isInspectable': True,  # Allow 2D view in model inspector
