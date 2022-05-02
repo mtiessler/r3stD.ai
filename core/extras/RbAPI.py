@@ -68,7 +68,7 @@ class RbAPI:
         response = requests.get(RbAPI.BASE_URL, params = params)
         data = json.loads(response.text)
 
-        if data['error'] is not 'false':
+        if data['error'] != 'false':
             return None
 
         return data['response']

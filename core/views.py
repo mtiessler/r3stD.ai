@@ -70,7 +70,7 @@ def results(request):
     model_image_links = fb.load_model_image_links(fb_uuid)
     for link in model_image_links:
         annotations = rb.get_all_data(link)
-        images.append({'link': link, 'annotations': annotations})
+        # images.append({'link': link, 'annotations': annotations})
 
     # A su vez, como tenemos el OBJ, lo subimos a sketchfab
     # Una vez subido, accedemos a la URL para obtener el UID del sketch
